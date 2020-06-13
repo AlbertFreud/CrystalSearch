@@ -1,0 +1,73 @@
+varying vec4 color,Position;
+varying vec3 normal;
+varying vec2 texCoords;
+varying vec3 texCd3d;
+varying vec4 lightDir0;
+varying vec4 scPosition;
+uniform int Timer;
+uniform int isTexed;
+uniform int isLighted;
+uniform sampler2D Tex0,Tex1;
+uniform sampler3D Tex2;
+uniform mat4 matLight;
+
+mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
+{
+    // get edge vectors of the pixel triangle
+    vec3 dp1 = dFdx( p );
+    vec3 dp2 = dFdy( p );
+    vec2 duv1 = dFdx( uv );
+    vec2 duv2 = dFdy( uv );
+ 
+    // solve the linear system
+    vec3 dp2perp = cross( dp2, N );
+    vec3 dp1perp = cross( N, dp1 );
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+ 
+    // construct a scale-invariant frame 
+    float invmax = inversesqrt( max( dot(T,T), dot(B,B) ) );
+    return mat3( T * invmax, B * invmax, N );
+}
+ 
+vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord )
+{
+    // assume N, the interpolated vertex normal and 
+    // V, the view vector (vertex to eye)
+    vec3 map = texture(Tex0, texcoord ).xyz;
+    map = map * 255./127. - 128./127.;
+    mat3 TBN = cotangent_frame(N, -V, texcoord);
+    return normalize(TBN * map);
+}
+
+void main()
+{
+    vec4 pos=Position/Position.w;
+
+    vec4 col=color;
+    if(isTexed>0)
+        col=col*texture(Tex0,texCoords);
+    
+    vec3 v=normalize(vec3(0)-pos.xyz);
+    vec3 n=normalize(normal);
+    if(dot(n,v)<0.0)n=-n;
+    vec3 l=normalize(lightDir0.xyz);
+    float nl=max(dot(n,l),0.0);
+    vec4 diffuse = vec4(color.xyz*nl,1.0);
+
+    vec3 r=reflect(-l,n);
+    const float expose = 100.0;
+    float rv=max(dot(r,v),0.0);
+    vec4 specular = vec4(vec3(pow(rv,expose)),0.0);
+    
+    if(isLighted>0)
+        col=col*diffuse+specular;
+    
+    //col= gl_ModelViewMatrix * vec4(n.xyz,1);
+    //col=texture(Tex2,texCd3d);
+    gl_FragData[0] = col;
+    //gl_FragData[1] = vec4(texCoords,0,1);
+    //gl_FragData[2] = vec4(pos.xy,1,1);
+    gl_FragDepth=scPosition.z/scPosition.w;
+}
+

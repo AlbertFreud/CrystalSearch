@@ -1,0 +1,25 @@
+varying vec4 color,Position;
+varying vec3 normal;
+varying vec2 texCoords;
+varying vec3 texCd3d;
+varying vec4 lightDir0;
+varying vec4 scPosition;
+uniform mat4 matLight;
+uniform mat4 imatView;
+void main()
+{
+    color=gl_Color;
+    //Position = ftransform();
+    //Position = gl_ModelViewProjectionMatrix *  gl_Vertex;
+    Position = gl_ModelViewMatrix * gl_Vertex;
+    //Position = matLight* gl_Vertex;
+    //Position = gl_ProjectionMatrix * matLight * imatView * gl_ModelViewMatrix *  gl_Vertex;
+    //normal = gl_NormalMatrix * gl_Normal * gl_NormalScale;
+    //normal = gl_NormalMatrix * gl_Normal;
+    normal = (gl_ModelViewMatrix * vec4(gl_Normal.xyz,0)).xyz;
+    texCoords=gl_MultiTexCoord0.st;
+    texCd3d= gl_MultiTexCoord0.stp;
+    lightDir0 = gl_LightSource[0].position-gl_ModelViewMatrix*vec4(0,0,0,1);
+    gl_Position=gl_ProjectionMatrix * Position;
+    scPosition=gl_Position;
+}
